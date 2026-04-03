@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Manufacturing Game</title>
   <link rel="stylesheet" href="css/game.css" />
 </head>
@@ -10,28 +10,29 @@
 
 <!-- ===== HEADER ===== -->
 <header id="header">
-  <div id="logo">✈️ AEROFORGE</div>
-  <span id="company-name" title="Click Rename to change">AeroForge Industries</span>
-  <span id="level-badge" class="level-badge level-1">Lv.1 Startup</span>
-  <span id="cash-display">$500K</span>
-
-  <div id="xp-container">
-    <div id="xp-track"><div id="xp-bar"></div></div>
-    <span id="xp-text">0 / 100 XP</span>
+  <div id="header-left">
+    <div id="logo">✈️ AEROFORGE</div>
+    <span id="level-badge" class="level-badge level-1">Lv.1 Startup</span>
+    <span id="cash-display">$500K</span>
+    <span id="date-display">Jan 2024 Q1</span>
   </div>
 
-  <span id="date-display">Jan 2024 Q1</span>
-  <span id="reputation-stars" title="Company Reputation">★☆☆☆☆</span>
-  <span id="research-points" title="Research Points">⚗️ 0 RP</span>
-  <span id="credit-score-display" title="Credit Score">🏦 680</span>
-
-  <div class="header-buttons">
-    <button class="hdr-btn hdr-btn-bank" id="bank-btn" title="Open Finance Center">🏦 Bank</button>
-    <button class="hdr-btn" id="rename-btn" title="Rename company">✏️ Rename</button>
-    <button class="hdr-btn" id="save-btn" title="Save game">💾 Save</button>
-    <button class="hdr-btn" id="new-game-btn" title="Start new game">🆕 New Game</button>
+  <div id="header-right">
+    <span id="reputation-stars" title="Reputation">★☆☆☆☆</span>
+    <span id="research-points" title="Research Points">⚗️ 0 RP</span>
+    <span id="credit-score-display" title="Credit Score">🏦 680</span>
+    <button class="hdr-btn hdr-btn-bank" id="bank-btn" title="Finance Center">🏦 Bank</button>
+    <button class="hdr-btn" id="save-btn" title="Save">💾</button>
+    <button class="hdr-btn" id="rename-btn" title="Rename">✏️</button>
+    <button class="hdr-btn" id="new-game-btn" title="New Game">🆕</button>
   </div>
 </header>
+
+<!-- XP Bar (full width under header) -->
+<div id="xp-row">
+  <div id="xp-track"><div id="xp-bar"></div></div>
+  <span id="xp-text">0 / 100 XP</span>
+</div>
 
 <!-- ===== ACTIVE EVENTS BANNER ===== -->
 <div id="active-events-banner"></div>
@@ -39,68 +40,113 @@
 <!-- ===== MAIN LAYOUT ===== -->
 <div id="main">
 
-  <!-- === FACTORY GRID === -->
-  <div id="grid-area">
-    <div id="grid-area-inner">
-      <div id="factory-grid"></div>
+  <!-- === PANEL: FACTORY (tab: factory) === -->
+  <div id="panel-factory" class="tab-panel active-panel">
+    <div id="grid-area">
+      <div id="grid-area-inner">
+        <div id="factory-grid"></div>
+      </div>
+    </div>
+    <!-- Mobile build strip (shown inside factory panel) -->
+    <div id="mobile-build-strip">
+      <div id="mobile-build-menu"></div>
+    </div>
+    <!-- Mobile stats row -->
+    <div id="mobile-stats-row"></div>
+  </div>
+
+  <!-- === PANEL: CONTRACTS (tab: contracts) === -->
+  <div id="panel-contracts" class="tab-panel">
+    <div class="panel-scroll">
+      <div class="panel-section-header">🔧 Active Contracts</div>
+      <div id="contracts-active"></div>
+      <div class="panel-section-header" style="margin-top:12px">📋 Available Contracts</div>
+      <div id="contracts-available"></div>
     </div>
   </div>
 
-  <!-- === SIDEBAR === -->
-  <div id="sidebar">
+  <!-- === PANEL: EVENTS (tab: events) === -->
+  <div id="panel-events" class="tab-panel">
+    <div class="panel-scroll">
+      <div class="panel-section-header">📡 Live Event Feed</div>
+      <div id="event-feed"></div>
+    </div>
+  </div>
 
-    <!-- Active Contracts -->
+  <!-- === PANEL: FINANCE (tab: finance) === -->
+  <div id="panel-finance" class="tab-panel">
+    <div class="panel-scroll">
+      <div class="panel-section-header">
+        🏦 Finance & Credit
+        <button class="sidebar-hdr-btn" onclick="UI.openBankModal()">Take Loan →</button>
+      </div>
+      <div id="bank-panel"></div>
+      <div class="panel-section-header" style="margin-top:12px">🔬 Research & Tech</div>
+      <div id="tech-panel"></div>
+    </div>
+  </div>
+
+  <!-- === DESKTOP SIDEBAR (hidden on mobile, shown on desktop) === -->
+  <div id="sidebar">
     <div class="sidebar-section">
       <div class="sidebar-section-header">
         <span>🔧 Active Contracts</span>
-        <span id="active-count" style="color:var(--green)"></span>
       </div>
-      <div class="sidebar-section-content" id="contracts-active"></div>
+      <div class="sidebar-section-content" id="sidebar-contracts-active"></div>
     </div>
-
-    <!-- Available Contracts -->
     <div class="sidebar-section">
       <div class="sidebar-section-header">
         <span>📋 Available Contracts</span>
         <span style="color:var(--text-muted);font-size:0.75em">Auto-refreshes</span>
       </div>
-      <div class="sidebar-section-content" style="max-height:220px;" id="contracts-available"></div>
+      <div class="sidebar-section-content" style="max-height:220px;" id="sidebar-contracts-available"></div>
     </div>
-
-    <!-- Events Feed -->
+    <div class="sidebar-section">
+      <div class="sidebar-section-header"><span>📡 Events</span></div>
+      <div class="sidebar-section-content event-section" id="sidebar-event-feed"></div>
+    </div>
     <div class="sidebar-section">
       <div class="sidebar-section-header">
-        <span>📡 Events</span>
-      </div>
-      <div class="sidebar-section-content event-section" id="event-feed"></div>
-    </div>
-
-    <!-- Banking / Finance -->
-    <div class="sidebar-section">
-      <div class="sidebar-section-header">
-        <span>🏦 Finance & Credit</span>
+        <span>🏦 Finance</span>
         <button class="sidebar-hdr-btn" onclick="UI.openBankModal()">Loans →</button>
       </div>
-      <div id="bank-panel"></div>
+      <div id="sidebar-bank-panel"></div>
     </div>
-
-    <!-- Research / Tech Tree -->
-    <div class="sidebar-section" id="tech-panel-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
-      <div class="sidebar-section-header">
-        <span>🔬 Research & Tech</span>
-      </div>
-      <div id="tech-panel"></div>
+    <div class="sidebar-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="sidebar-section-header"><span>🔬 Research</span></div>
+      <div id="sidebar-tech-panel"></div>
     </div>
+  </div>
 
-  </div><!-- end sidebar -->
 </div><!-- end main -->
 
 <!-- ===== BOTTOM BAR ===== -->
 <div id="bottom-bar">
-  <div id="build-menu-header">🏗️ Build Menu — Click to select, then click grid cell to place</div>
+  <div id="build-menu-header">🏗️ Select a building, then tap a grid cell</div>
   <div id="build-menu"></div>
   <div id="stats-bar"></div>
 </div>
+
+<!-- ===== MOBILE TAB BAR ===== -->
+<nav id="tab-bar">
+  <button class="tab-btn active" data-tab="factory" onclick="UI.switchTab('factory')">
+    <span class="tab-icon">🏭</span>
+    <span class="tab-label">Factory</span>
+  </button>
+  <button class="tab-btn" data-tab="contracts" onclick="UI.switchTab('contracts')">
+    <span class="tab-icon">📋</span>
+    <span class="tab-label">Contracts</span>
+    <span class="tab-badge" id="tab-badge-contracts"></span>
+  </button>
+  <button class="tab-btn" data-tab="events" onclick="UI.switchTab('events')">
+    <span class="tab-icon">📡</span>
+    <span class="tab-label">Events</span>
+  </button>
+  <button class="tab-btn" data-tab="finance" onclick="UI.switchTab('finance')">
+    <span class="tab-icon">🏦</span>
+    <span class="tab-label">Finance</span>
+  </button>
+</nav>
 
 <!-- ===== BUILDING MODAL ===== -->
 <div id="building-modal">

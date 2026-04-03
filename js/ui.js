@@ -1,10 +1,13 @@
 // AeroForge - UI Rendering & Interaction
 
 const UI = {
-  // DOM references
   els: {},
+  activeTab: 'factory',
+  isMobile: false,
 
   init(state) {
+    this.isMobile = window.innerWidth < 768;
+
     this.els = {
       companyName: document.getElementById('company-name'),
       levelBadge: document.getElementById('level-badge'),
@@ -14,15 +17,26 @@ const UI = {
       dateDisplay: document.getElementById('date-display'),
       reputationStars: document.getElementById('reputation-stars'),
       grid: document.getElementById('factory-grid'),
+      // Mobile panel elements
       contractsActive: document.getElementById('contracts-active'),
       contractsAvailable: document.getElementById('contracts-available'),
       eventFeed: document.getElementById('event-feed'),
+      techPanel: document.getElementById('tech-panel'),
+      bankPanel: document.getElementById('bank-panel'),
+      // Desktop sidebar elements
+      sidebarContractsActive: document.getElementById('sidebar-contracts-active'),
+      sidebarContractsAvailable: document.getElementById('sidebar-contracts-available'),
+      sidebarEventFeed: document.getElementById('sidebar-event-feed'),
+      sidebarTechPanel: document.getElementById('sidebar-tech-panel'),
+      sidebarBankPanel: document.getElementById('sidebar-bank-panel'),
+      // Build menus
       buildMenu: document.getElementById('build-menu'),
+      mobileBuildMenu: document.getElementById('mobile-build-menu'),
       statsBar: document.getElementById('stats-bar'),
+      mobileStatsRow: document.getElementById('mobile-stats-row'),
       modal: document.getElementById('building-modal'),
       modalContent: document.getElementById('modal-content'),
       modalClose: document.getElementById('modal-close'),
-      techPanel: document.getElementById('tech-panel'),
       activeEventsBanner: document.getElementById('active-events-banner'),
       toastContainer: document.getElementById('toast-container'),
       newGameBtn: document.getElementById('new-game-btn'),
@@ -34,7 +48,6 @@ const UI = {
       bankModalClose: document.getElementById('bank-modal-close'),
       bankBtn: document.getElementById('bank-btn'),
       creditScoreDisplay: document.getElementById('credit-score-display'),
-      bankPanel: document.getElementById('bank-panel'),
     };
 
     // Bind persistent events
@@ -63,6 +76,30 @@ const UI = {
 
     this.buildGrid(state);
     this.buildBuildMenu(state);
+
+    window.addEventListener('resize', () => {
+      const wasMobile = this.isMobile;
+      this.isMobile = window.innerWidth < 768;
+      if (wasMobile !== this.isMobile) this.render(Game.state);
+    });
+  },
+
+  // ===== TAB NAVIGATION (mobile) =====
+  switchTab(tabName) {
+    this.activeTab = tabName;
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active-panel'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+    const panel = document.getElementById(`panel-${tabName}`);
+    if (panel) panel.classList.add('active-panel');
+    const btn = document.querySelector(`[data-tab="${tabName}"]`);
+    if (btn) btn.classList.add('active');
+
+    // Show/hide build strip only on factory tab
+    const strip = document.getElementById('mobile-build-strip');
+    const statsRow = document.getElementById('mobile-stats-row');
+    if (strip) strip.style.display = tabName === 'factory' ? '' : 'none';
+    if (statsRow) statsRow.style.display = tabName === 'factory' ? '' : 'none';
   },
 
   buildGrid(state) {
@@ -86,23 +123,25 @@ const UI = {
   },
 
   buildBuildMenu(state) {
-    const menu = this.els.buildMenu;
-    menu.innerHTML = '';
-
     const buildings = Buildings.getAll();
-    for (const [id, def] of Object.entries(buildings)) {
-      const btn = document.createElement('button');
-      btn.className = 'build-btn';
-      btn.dataset.buildingId = id;
-      btn.innerHTML = `
-        <span class="build-emoji">${def.emoji}</span>
-        <span class="build-name">${def.name}</span>
-        <span class="build-cost">$${Utils.formatMoney(def.cost)}</span>
-      `;
-      btn.title = `${def.name}\n${def.description}\nUpkeep: $${Utils.formatMoney(def.upkeep)}/mo\nWorkers: ${def.workers}`;
-      btn.addEventListener('click', () => this.selectBuilding(id, btn));
-      menu.appendChild(btn);
-    }
+    const menus = [this.els.buildMenu, this.els.mobileBuildMenu].filter(Boolean);
+
+    menus.forEach(menu => {
+      menu.innerHTML = '';
+      for (const [id, def] of Object.entries(buildings)) {
+        const btn = document.createElement('button');
+        btn.className = 'build-btn';
+        btn.dataset.buildingId = id;
+        btn.innerHTML = `
+          <span class="build-emoji">${def.emoji}</span>
+          <span class="build-name">${def.name}</span>
+          <span class="build-cost">$${Utils.formatMoney(def.cost)}</span>
+        `;
+        btn.title = `${def.name}\n${def.description}\nUpkeep: $${Utils.formatMoney(def.upkeep)}/mo\nWorkers: ${def.workers}`;
+        btn.addEventListener('click', () => this.selectBuilding(id, btn));
+        menu.appendChild(btn);
+      }
+    });
   },
 
   selectBuilding(buildingId, btnEl) {
@@ -288,6 +327,7 @@ const UI = {
   },
 
   render(state) {
+    this.isMobile = window.innerWidth < 768;
     this.renderHeader(state);
     this.renderGrid(state);
     this.renderContracts(state);
@@ -297,6 +337,24 @@ const UI = {
     this.renderActiveEvents(state);
     this.renderResearchPanel(state);
     this.renderBankPanel(state);
+    this.updateTabBadges(state);
+  },
+
+  updateTabBadges(state) {
+    const badge = document.getElementById('tab-badge-contracts');
+    if (!badge) return;
+    const count = state.activeContracts.length;
+    if (count > 0) {
+      badge.textContent = count;
+      badge.classList.add('visible');
+    } else {
+      badge.classList.remove('visible');
+    }
+  },
+
+  // Helper: set innerHTML on an element if it exists
+  _setHtml(el, html) {
+    if (el) el.innerHTML = html;
   },
 
   renderHeader(state) {
@@ -379,12 +437,12 @@ const UI = {
   },
 
   renderContracts(state) {
-    // Active contracts
-    const activeEl = this.els.contractsActive;
+    // Active contracts HTML
+    let activeHtml;
     if (state.activeContracts.length === 0) {
-      activeEl.innerHTML = '<div class="no-contracts">No active contracts. Bid on one!</div>';
+      activeHtml = '<div class="no-contracts">No active contracts. Bid on one!</div>';
     } else {
-      activeEl.innerHTML = state.activeContracts.map(c => {
+      activeHtml = state.activeContracts.map(c => {
         const pct = Math.floor(c.progress);
         const tierColor = Contracts.getTierColor(c.tier);
         const riskColor = Contracts.getRiskColor(c.risk);
@@ -413,14 +471,14 @@ const UI = {
     }
 
     // Available contracts
-    const availEl = this.els.contractsAvailable;
     const maxContracts = GAME_DATA.MAX_CONTRACTS_BY_LEVEL[state.level] || 1;
     const canBid = state.activeContracts.length < maxContracts;
 
+    let availHtml;
     if (state.availableContracts.length === 0) {
-      availEl.innerHTML = '<div class="no-contracts">No contracts available. Grow your company!</div>';
+      availHtml = '<div class="no-contracts">No contracts available. Grow your company!</div>';
     } else {
-      availEl.innerHTML = state.availableContracts.map(c => {
+      availHtml = state.availableContracts.map(c => {
         const tierColor = Contracts.getTierColor(c.tier);
         const riskColor = Contracts.getRiskColor(c.risk);
         const tierName = Contracts.getTierName(c.tier);
@@ -447,30 +505,34 @@ const UI = {
         `;
       }).join('');
     }
+
+    // Write to mobile panels and desktop sidebar
+    this._setHtml(this.els.contractsActive, activeHtml);
+    this._setHtml(this.els.contractsAvailable, availHtml);
+    this._setHtml(this.els.sidebarContractsActive, activeHtml);
+    this._setHtml(this.els.sidebarContractsAvailable, availHtml);
   },
 
   renderEventFeed(state) {
-    const feedEl = this.els.eventFeed;
-    if (state.eventLog.length === 0) {
-      feedEl.innerHTML = '<div class="event-item neutral">No events yet...</div>';
-      return;
-    }
+    const html = state.eventLog.length === 0
+      ? '<div class="event-item neutral">No events yet...</div>'
+      : state.eventLog.slice(0, 30).map(ev => {
+          const typeClass = ev.type || 'neutral';
+          const ageText = ev.tick !== undefined ? `Wk ${ev.tick}` : '';
+          return `
+            <div class="event-item ${typeClass}">
+              <span class="event-msg">${ev.message}</span>
+              <span class="event-tick">${ageText}</span>
+            </div>
+          `;
+        }).join('');
 
-    feedEl.innerHTML = state.eventLog.slice(0, 20).map(ev => {
-      const typeClass = ev.type || 'neutral';
-      const icon = typeClass === 'success' ? '✅' : typeClass === 'danger' ? '⚠️' : '📌';
-      const ageText = ev.tick !== undefined ? `Wk ${ev.tick}` : '';
-      return `
-        <div class="event-item ${typeClass}">
-          <span class="event-msg">${ev.message}</span>
-          <span class="event-tick">${ageText}</span>
-        </div>
-      `;
-    }).join('');
+    this._setHtml(this.els.eventFeed, html);
+    this._setHtml(this.els.sidebarEventFeed, html);
   },
 
   renderBuildMenu(state) {
-    const buttons = document.querySelectorAll('.build-btn');
+    const buttons = document.querySelectorAll('.build-btn'); // covers both desktop and mobile
     buttons.forEach(btn => {
       const id = btn.dataset.buildingId;
       const check = Buildings.canPlace(state, id);
@@ -505,7 +567,7 @@ const UI = {
     const monthlyLoanPayments = typeof Banking !== 'undefined' ? Banking.totalMonthlyPayments(state) : 0;
     const scrapColor = scrapRate < 0.04 ? '#00b894' : scrapRate < 0.07 ? '#f0a500' : '#d63031';
 
-    this.els.statsBar.innerHTML = `
+    const statsHtml = `
       <div class="stat-item">
         <span class="stat-label">Total Revenue</span>
         <span class="stat-value green">$${Utils.formatMoney(state.stats.totalRevenue)}</span>
@@ -555,6 +617,9 @@ const UI = {
         <span class="stat-value gold">$${Utils.formatMoney(state.stats.peakCash)}</span>
       </div>
     `;
+
+    this._setHtml(this.els.statsBar, statsHtml);
+    this._setHtml(this.els.mobileStatsRow, statsHtml);
   },
 
   renderActiveEvents(state) {
@@ -573,13 +638,10 @@ const UI = {
   },
 
   renderResearchPanel(state) {
-    const panel = this.els.techPanel;
-    if (!panel) return;
-
     const techs = GAME_DATA.TECHS;
     const hasRD = Buildings.hasBuilding(state, 'rd_center');
 
-    panel.innerHTML = `
+    const html = `
       <div class="tech-header">
         <span>🧪 Research Lab</span>
         <span class="rp-count">${Math.floor(state.researchPoints)} RP</span>
@@ -603,19 +665,21 @@ const UI = {
         `;
       }).join('') : ''}
     `;
+
+    this._setHtml(this.els.techPanel, html);
+    this._setHtml(this.els.sidebarTechPanel, html);
   },
 
-  // ===== BANKING PANEL (sidebar section) =====
+  // ===== BANKING PANEL =====
   renderBankPanel(state) {
-    const panel = this.els.bankPanel;
-    if (!panel || !state.banking) return;
+    if (!state.banking) return;
 
     const tier = Banking.creditTier(state.banking.creditScore);
     const totalDebt = Banking.totalDebt(state);
     const monthlyPayments = Banking.totalMonthlyPayments(state);
     const activeLoans = state.banking.loans.filter(l => l.status === 'active');
 
-    panel.innerHTML = `
+    const html = `
       <div class="bank-summary">
         <div class="bank-score-row">
           <span class="bank-score-label">Credit Score</span>
@@ -655,8 +719,11 @@ const UI = {
             `;
           }).join('')}
         </div>
-      ` : `<div class="no-contracts">No active loans. Click 🏦 Bank to borrow.</div>`}
+      ` : `<div class="no-contracts">No active loans. Tap 🏦 Bank to borrow.</div>`}
     `;
+
+    this._setHtml(this.els.bankPanel, html);
+    this._setHtml(this.els.sidebarBankPanel, html);
   },
 
   // ===== BANKING MODAL (full loan interface) =====
